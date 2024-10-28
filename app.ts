@@ -5,9 +5,16 @@ import logger from "morgan";
 import cors from "cors";
 import dotenv from "dotenv";
 import wordsRouter from "./routes/words";
+import userRouter from "./routes/user"
+import mongoose from "mongoose";
 
 // Initialize environment variables
 dotenv.config();
+
+// Connect to DB
+mongoose.connect(process.env.MONGODB_URI as string)
+.then(() => console.log('Connected to MongoDB'))
+.catch((error) => console.error('Could not connect to MongoDB:', error));
 
 // Create an Express app
 const app = express();
@@ -29,7 +36,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Routes
-app.use("/words", wordsRouter);
+app.use("/api/words", wordsRouter);
+app.use("/api/users", userRouter);
 
 // Start the server
 const PORT = process.env.PORT || 8000;
