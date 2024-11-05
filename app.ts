@@ -5,8 +5,8 @@ import logger from "morgan";
 import cors from "cors";
 import dotenv from "dotenv";
 import wordsRouter from "./routes/words";
-import userRouter from "./routes/user"
 import mongoose from "mongoose";
+import admin from 'firebase-admin';
 
 // Initialize environment variables
 dotenv.config();
@@ -15,6 +15,15 @@ dotenv.config();
 mongoose.connect(process.env.MONGODB_URI as string)
 .then(() => console.log('Connected to MongoDB'))
 .catch((error) => console.error('Could not connect to MongoDB:', error));
+
+// Initialize Firebase Admin SDK
+admin.initializeApp({
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  }),
+});
 
 // Create an Express app
 const app = express();
@@ -30,6 +39,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const corsOptions = {
   origin: process.env.FRONT_END_HOST,
   methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
   optionsSuccessStatus: 200,
 };
 
@@ -37,7 +47,6 @@ app.use(cors(corsOptions));
 
 // Routes
 app.use("/api/words", wordsRouter);
-app.use("/api/users", userRouter);
 
 // Start the server
 const PORT = process.env.PORT || 8000;

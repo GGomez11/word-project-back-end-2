@@ -1,26 +1,25 @@
-import { Request, Response, NextFunction } from "express";
-import { OAuth2Client } from "google-auth-library";
+import { NextFunction, Response, Request } from "express";
+import admin from 'firebase-admin';
 
-// Initialize Google OAuth client
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+  const idToken = req.headers.authorization?.split(' ')[1]; // Extract the token from the "Authorization" header
 
-// Middleware to verify the Google ID token
-export const verifyGoogleIdToken = async (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers['authorization']?.split(' ')[1]; // Get token from Authorization header
-    if (!token) {
-        res.status(401).json({ message: 'Unauthorized: No token provided' });
-        return
-    }
-    try {
-        const ticket = await client.verifyIdToken({
-            idToken: token,
-            audience: process.env.GOOGLE_CLIENT_ID, // Specify the CLIENT_ID of the app that accesses the backend
-        });
-    
-        next(); 
-    } catch (error) {
-        console.error('Error verifying token:', error);
-        res.status(401).json({ message: 'Unauthorized: Invalid token' });
-        return;
-    }
+  if (!idToken) {
+    res.status(401).send('Unauthorized: No token provided');
+    return;
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    // Proceed with your logic (e.g., access the user data)
+    //@ts-ignore
+    req.user = decodedToken
+    next()
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    res.status(401).send('Unauthorized: Invalid token');
+    return;
+  }
 };
+
+export default authMiddleware;
