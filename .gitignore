@@ -6,3 +6,4 @@ journal.txt
 decisions.txt
 word-project-key.json
 .vscode
+.DS_Store
