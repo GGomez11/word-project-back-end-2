@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction, response } from "express";
 import User from '../models/User';
 import authMiddleware from "../middleware/authMiddleware";
+import { MerriamWebsterEntry } from "../types/merriamWebsterEntry"
 
 const router = express.Router();
 
@@ -68,20 +69,17 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
    const request = await getWord(word);
    const response = await request.json();
     
-   //const response = await getWord(word);
-    
-    const parsedWord = parseDictionaryPayload(response, word);
-    console.log(parsedWord)
+  const parsedWord = parseDictionaryPayload(response, word);
    // Update users vocabulary
-   try {
-      // @ts-ignore
+  try {
+    // @ts-ignore
       await User.updateOne({uid: req.user.uid}, {$push: {vocabulary: parsedWord}}).exec()
-   } catch (error) {
+    } catch (error) {
       console.log("Update failed", error)
       res.status(400).json({"message": "Failed to add word."})
-   }
+    }
 
-   try {
+    try {
       //@ts-ignore
       const user = await User.findOne({uid: req.user.uid}, ).exec()
       if (user) {
@@ -94,7 +92,6 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
   } catch (error) {
     console.error('Error getting word from dicationary api', error);
   }
-  // Make request to add word to users vocab
 });
 
 router.delete('/:word', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
@@ -129,7 +126,7 @@ function parseDictionaryPayload(payload: any[], word: string): any {
       return [];
   }
 
-  // Filter the payload to include only entries related to "large"
+  // Filter the payload to include only entries related to root word
   const mainEntries = payload.filter(entry => 
     entry.hwi.hw.replace(/\*/g, '') == `${word}`
   ); 
@@ -148,10 +145,29 @@ function parseDictionaryPayload(payload: any[], word: string): any {
     }
     return definitionEntry
   })
+  let pronuncation = {
+    written: '',
+    audioURL: ''
+  }
+
+  // Get written pronunciation
+  if (checkForWrittenPronunciation(payload[0])) {
+    pronuncation.written = getWrittenPronunciation(payload[0])
+  } else {
+    pronuncation.written = "Not available"
+  }
+
+  // Get audio url pronunciation
+  if (checkForAudioPronunciation(payload[0])) {
+    pronuncation.audioURL = getAudioURLPronunciation(word, payload[0].hwi.prs[0].sound.audio)
+    
+  } else {
+    pronuncation.audioURL = 'Not available'
+  }
 
   const wordEntry = {
     word: word,
-    pronunciation: "",
+    pronunciation: pronuncation,
     results: results
   }
 
@@ -159,3 +175,44 @@ function parseDictionaryPayload(payload: any[], word: string): any {
 }
   
 
+function getAudioURLPronunciation(word: string, baseFileName: string) {
+  const languageCode = 'en';
+  const countryCode = 'us';
+  const format = 'mp3';
+  const subdirectory = getSubdirectory(word);
+
+  const url = `https://media.merriam-webster.com/audio/prons/${languageCode}/${countryCode}/${format}/${subdirectory}/${baseFileName}.${format}`
+    
+  return url
+}
+
+function getWrittenPronunciation(payload: MerriamWebsterEntry) {
+  return payload.hwi!.prs![0].mw;
+}
+
+function getSubdirectory(word: string) {
+    // Check if audio begins with "bix"
+    if (word.startsWith("bix")) {
+      return "bix";
+    }
+    // Check if audio begins with "gg"
+    else if (word.startsWith("gg")) {
+        return "gg";
+    }
+    // Check if audio begins with a number or punctuation
+    else if (/^[0-9\W]/.test(word[0])) {
+        return "number";
+    }
+    // Otherwise, use the first letter of audio
+    else {
+        return word[0];
+    }
+}
+
+function checkForAudioPronunciation(payload: MerriamWebsterEntry) {
+  return payload.hwi.prs?.some(prs => prs.sound?.audio !== undefined) ?? false;
+}
+
+function checkForWrittenPronunciation(payload: MerriamWebsterEntry) {
+  return payload.hwi.prs?.some(prs => prs.mw !== undefined) ?? false;
+}

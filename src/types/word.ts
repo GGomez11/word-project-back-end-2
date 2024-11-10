@@ -6,5 +6,8 @@ export interface Word {
         synonym?: string;
         partOfSpeech: string;
     }[];
-    pronunciation?: string;
+    pronunciation?: {
+        written: string;
+        audioURL: string;
+    }
 }
