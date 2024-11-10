@@ -2,15 +2,21 @@
   "name": "word-project-back-end-2",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/index",
+  "main": ".dist/app.js",
   "scripts": {
     "build": "tsc",
-    "dev": "nodemon app.ts",
+    "dev": "nodemon --exec ts-node src/app.ts",
     "start": "node dist/app.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/mongoose": "^5.11.96",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -19,14 +25,7 @@
     "google-auth-library": "^9.14.2",
     "mongoose": "^8.7.3",
     "morgan": "^1.10.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.6.3",
-    "@types/cookie-parser": "^1.4.7",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/mongoose": "^5.11.96",
-    "@types/morgan": "^1.9.9",
-    "@types/node": "^22.8.1"
+    "typescript": "^5.6.3"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.7",
