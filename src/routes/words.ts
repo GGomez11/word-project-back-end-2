@@ -65,13 +65,13 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
   }
   // Make request to rapid api
   try {
-    // Uncomment for real request
-   const request = await getWord(word);
-   const response = await request.json();
+    const request = await getWord(word);
+    const response = await request.json();
     
-  const parsedWord = parseDictionaryPayload(response, word);
+    const parsedWord = parseDictionaryPayload(response, word);
    // Update users vocabulary
   try {
+
     // @ts-ignore
       await User.updateOne({uid: req.user.uid}, {$push: {vocabulary: parsedWord}}).exec()
     } catch (error) {
@@ -127,24 +127,30 @@ function parseDictionaryPayload(payload: any[], word: string): any {
   }
 
   // Filter the payload to include only entries related to root word
-  const mainEntries = payload.filter(entry => 
+  const mainEntries = payload.filter(entry =>
     entry.hwi.hw.replace(/\*/g, '') == `${word}`
   ); 
   
   const results = mainEntries.map(entry => {
-    let synynom = ''
+    let synonym = 'None'
 
     if (entry.syns) {
-      synynom = entry.syns
+      // @ts-ignore
+      synonym = entry.syns[0].pt
+      // @ts-ignore
+      .filter(syn => syn[0] == 'text')
+      // @ts-ignore
+      .map(syn => syn[1].replace(/{sc}(.*?)\{\/sc}/g, '<strong>$1</strong>'))
     }
-
+    console.log(synonym)
     const definitionEntry = {
       definition: entry.shortdef[0],
       partOfSpeech: entry.fl,
-      synynom: synynom
+      synonym: synonym
     }
     return definitionEntry
   })
+  
   let pronuncation = {
     written: '',
     audioURL: ''
@@ -170,7 +176,7 @@ function parseDictionaryPayload(payload: any[], word: string): any {
     pronunciation: pronuncation,
     results: results
   }
-
+  
   return wordEntry
 }
   
