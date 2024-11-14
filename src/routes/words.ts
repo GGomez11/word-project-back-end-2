@@ -8,20 +8,25 @@ const router = express.Router();
 /* GET default word listing. */
 router.get('/homePage', (req: Request, res: Response, next: NextFunction) => {
   res.json({
-    word: 'Diminutive',
+    word: 'diligent',
     id: 1,
     results: [
       {
-        definition: 'very small',
+        definition: 'characterized by steady, earnest, and energetic effort : painstaking',
         partOfSpeech: 'adjective',
-        synonym: 'bantam, flyspeck, lilliputian, midget, petite, tiny',
-      },
-      {
-        definition: 'a word that is formed with a suffix (such as -let or -kin) to indicate smallness',
-        partOfSpeech: 'noun',
+        synonym: [
+          "<strong>busy</strong> <strong>industrious</strong> <strong>diligent</strong> <strong>assiduous</strong> <strong>sedulous</strong> mean actively engaged or occupied. <strong>busy</strong> chiefly stresses activity as opposed to idleness or leisure. ",
+          " <strong>industrious</strong> implies characteristic or habitual devotion to work. ",
+          " <strong>diligent</strong> suggests earnest application to some specific object or pursuit. ",
+          " <strong>assiduous</strong> stresses careful and unremitting application. ",
+          " <strong>sedulous</strong> implies painstaking and persevering application. "
+        ]
       },
     ],
-    pronunciation: `dɪ'mɪnjətɪv`,
+    pronunciation: {
+      written: `'di-lə-jənt`,
+      audioURL: 'https://media.merriam-webster.com/audio/prons/en/us/mp3/d/dilige04.mp3'
+    }
   });
 });
 
@@ -67,10 +72,22 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
   try {
     const request = await getWord(word);
     const response = await request.json();
+
+    if (response.length == 0) {
+      res.status(400).json({"message": "Failed to add word."})
+      return
+    }
+    let parsedWord = ''
+
+    try {
+      parsedWord = parseDictionaryPayload(response, word);
+    } catch (error) {
+      res.status(400).json({"message": "Failed to add word."})
+      return
+    }
     
-    const parsedWord = parseDictionaryPayload(response, word);
-   // Update users vocabulary
-  try {
+    // Update users vocabulary
+    try {
 
     // @ts-ignore
       await User.updateOne({uid: req.user.uid}, {$push: {vocabulary: parsedWord}}).exec()
@@ -116,7 +133,7 @@ router.delete('/:word', authMiddleware, async (req: Request, res: Response, next
 export default router;
 
 // Get from Dictionary API
-async function getWord(word: string) {
+function getWord(word: string) {
    return fetch(`${process.env.DICTIONARY_API_URL}/${word}?key=${process.env.DICTIONARY_API_KEY}`)
 }
 
