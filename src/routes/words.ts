@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction, response } from "express";
 import User from '../models/User';
 import authMiddleware from "../middleware/authMiddleware";
 import { MerriamWebsterEntry } from "../types/merriamWebsterEntry"
+// @ts-ignore
+import lemmatizer from 'wink-lemmatizer';
 
 const router = express.Router();
 
@@ -63,24 +65,32 @@ router.get('/', authMiddleware, async (req: Request, res: Response, next: NextFu
 });
 
 router.post('/', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-  const word = req.body.word;
+  let word = req.body.word;
   if (!word) {
     res.status(400).json({"message": "No word found to add."}).send();
     return;
   }
   // Make request to rapid api
-  try {
-    const request = await getWord(word);
-    const response = await request.json();
+  let request;
+  let response;
+  let word_base = '';
 
-    if (response.length == 0) {
-      res.status(400).json({"message": "Failed to add word."})
+  try {
+    for (const cand of getCandidates(word)){
+      request = await getWordDefinition(cand);
+      response = await request.json();
+      if (response.length !== 0) {
+        word_base = cand
+        break
+      }
+      res.status(400).json({"message": "Failed to add word."});
       return
     }
+  
     let parsedWord = ''
-
+    console.log(word_base)
     try {
-      parsedWord = parseDictionaryPayload(response, word);
+      parsedWord = parseDictionaryPayload(response, word_base);
     } catch (error) {
       res.status(400).json({"message": "Failed to add word."})
       return
@@ -88,7 +98,6 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
     
     // Update users vocabulary
     try {
-
     // @ts-ignore
       await User.updateOne({uid: req.user.uid}, {$push: {vocabulary: parsedWord}}).exec()
     } catch (error) {
@@ -132,8 +141,22 @@ router.delete('/:word', authMiddleware, async (req: Request, res: Response, next
 });
 export default router;
 
+function getCandidates(word: string) {
+  let candidates = new Set<string>([
+    lemmatizer.verb(word),
+    lemmatizer.noun(word),
+    lemmatizer.adjective(word),
+  ]);
+
+  // Super-light extra normalizations
+  if (word.endsWith("'s")) candidates.add(word.slice(0, -2));
+  if (word.endsWith("’s")) candidates.add(word.slice(0, -2));
+
+  return [...candidates].filter(Boolean);
+}
+
 // Get from Dictionary API
-function getWord(word: string) {
+function getWordDefinition(word: string) {
    return fetch(`${process.env.DICTIONARY_API_URL}/${word}?key=${process.env.DICTIONARY_API_KEY}`)
 }
 
