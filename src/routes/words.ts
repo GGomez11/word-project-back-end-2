@@ -74,6 +74,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
   let request;
   let response;
   let word_base = '';
+  let parsedWord = ''
 
   try {
     for (const cand of getCandidates(word)){
@@ -87,8 +88,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response, next: NextF
       return
     }
   
-    let parsedWord = ''
-    console.log(word_base)
+    
     try {
       parsedWord = parseDictionaryPayload(response, word_base);
     } catch (error) {
